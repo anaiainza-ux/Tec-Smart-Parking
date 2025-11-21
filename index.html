@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tec Smart Parking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'tec-blue': '#0039A5', // Classic Tec Blue
+              'tec-light-blue': '#97D2FB',
+              'tec-orange': '#FF8C42',
+              'tec-green': '#00E676', // Brighter green for dark mode
+              
+              // New Dark Blue Theme Palette
+              'tec-bg-dark': '#020B1C', // Deep Midnight Blue
+              'tec-surface': '#0A1F40', // Slightly lighter blue for cards
+            },
+            boxShadow: {
+              'white-glow': '0 0 20px rgba(255, 255, 255, 0.15)',
+              'white-glow-strong': '0 0 25px rgba(255, 255, 255, 0.25)',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-tec-bg-dark min-h-screen text-white font-sans antialiased selection:bg-tec-light-blue selection:text-tec-blue">
+    <div id="root"></div>
+  </body>
+</html>

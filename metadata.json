@@ -1,0 +1,5 @@
+{
+  "name": "Tec Smart Parking",
+  "description": "A real-time smart parking reservation system for Tec de Monterrey, featuring user authentication, schedule management, and live spot availability tracking.",
+  "requestFramePermissions": []
+}
