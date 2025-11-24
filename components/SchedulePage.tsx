@@ -36,7 +36,7 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ user, onComplete }) 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const slotsArray = Array.from(selectedSlots);
+      const slotsArray = Array.from(selectedSlots) as string[];
       if (slotsArray.length > 0) {
         await api.saveSchedule(user.user_id, slotsArray);
       }
