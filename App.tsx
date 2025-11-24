@@ -28,9 +28,9 @@ const App: React.FC = () => {
         <LoginPage onLoginSuccess={handleLoginSuccess} />
       )}
       
-      {currentView === ViewState.SCHEDULE && (
+      {currentView === ViewState.SCHEDULE && currentUser && (
         <div className="min-h-screen flex flex-col pt-10">
-             <SchedulePage onComplete={handleScheduleComplete} />
+             <SchedulePage user={currentUser} onComplete={handleScheduleComplete} />
         </div>
       )}
 

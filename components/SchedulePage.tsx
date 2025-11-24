@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
+import { User } from '../types';
+import { api } from '../services/api';
 
 interface SchedulePageProps {
+  user: User;
   onComplete: () => void;
 }
 
@@ -16,8 +19,9 @@ const TIME_SLOTS = [
   "9:00 PM - 11:00 PM"
 ];
 
-export const SchedulePage: React.FC<SchedulePageProps> = ({ onComplete }) => {
+export const SchedulePage: React.FC<SchedulePageProps> = ({ user, onComplete }) => {
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+  const [isSaving, setIsSaving] = useState(false);
 
   const toggleSlot = (slot: string) => {
     const newSlots = new Set(selectedSlots);
@@ -27,6 +31,23 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ onComplete }) => {
       newSlots.add(slot);
     }
     setSelectedSlots(newSlots);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const slotsArray = Array.from(selectedSlots);
+      if (slotsArray.length > 0) {
+        await api.saveSchedule(user.user_id, slotsArray);
+      }
+      onComplete();
+    } catch (error) {
+      console.error("Error saving schedule:", error);
+      // Ensure we proceed even if there's an error (fallback behavior)
+      onComplete();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -48,6 +69,10 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ onComplete }) => {
                     ? 'border-tec-blue bg-blue-900/40 shadow-[0_0_10px_rgba(0,57,165,0.5)]' 
                     : 'border-white/10 hover:border-tec-light-blue/50 hover:bg-white/5'
                 }`}
+                onClick={(e) => {
+                  e.preventDefault(); // Prevent double toggle on label click
+                  toggleSlot(slot);
+                }}
               >
                 <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                   isSelected ? 'bg-tec-blue border-tec-blue' : 'border-gray-400'
@@ -64,12 +89,17 @@ export const SchedulePage: React.FC<SchedulePageProps> = ({ onComplete }) => {
       </div>
 
       <div className="flex flex-col gap-4">
-        <Button onClick={onComplete} className="w-full shadow-lg shadow-blue-900/50">
+        <Button 
+          onClick={handleSave} 
+          className="w-full shadow-lg shadow-blue-900/50"
+          isLoading={isSaving}
+        >
           Guardar Horario
         </Button>
         <button 
           onClick={onComplete}
           className="text-gray-500 text-sm hover:text-white transition-colors text-center"
+          disabled={isSaving}
         >
           Omitir por ahora
         </button>
