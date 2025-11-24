@@ -5,9 +5,10 @@ import { Button } from './Button';
 
 interface LoginPageProps {
   onLoginSuccess: (user: User) => void;
+  onAdminLogin: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onAdminLogin }) => {
   const [nombre, setNombre] = useState('');
   const [matricula, setMatricula] = useState('');
   const [hasDisability, setHasDisability] = useState(false);
@@ -29,9 +30,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[90vh] p-4">
+    <div className="flex flex-col items-center justify-center min-h-[90vh] p-4 relative">
       {/* Main Card with White Glow Shadow */}
-      <div className="w-full max-w-md bg-tec-surface rounded-xl shadow-white-glow p-8 border border-white/10">
+      <div className="w-full max-w-md bg-tec-surface rounded-xl shadow-white-glow p-8 border border-white/10 z-10">
         <h1 className="text-4xl font-bold text-white mb-2 text-center tracking-tight">Smart Parking</h1>
         <p className="text-tec-light-blue mb-8 text-center uppercase tracking-widest text-xs font-semibold">Tec de Monterrey</p>
 
@@ -83,6 +84,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             Ingresar
           </Button>
         </form>
+      </div>
+
+      <div className="mt-8">
+        <button 
+          onClick={onAdminLogin}
+          className="text-gray-500 text-sm hover:text-white transition-colors border-b border-transparent hover:border-white pb-1"
+        >
+          Acceso Administrativo
+        </button>
       </div>
     </div>
   );

@@ -17,8 +17,19 @@ export interface Reservation {
   end_time: string;
 }
 
+export interface AdminStats {
+  temperature: number;
+  humidity: number;
+  totalSpots: number;
+  occupiedSpots: number;
+  availableSpots: number;
+  trafficFlow: number[]; // Array of numbers representing cars per hour
+  dailyOccupancy: number[]; // Array for bar chart
+}
+
 export enum ViewState {
   LOGIN = 'LOGIN',
   SCHEDULE = 'SCHEDULE',
   DASHBOARD = 'DASHBOARD',
+  ADMIN = 'ADMIN',
 }

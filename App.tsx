@@ -3,6 +3,7 @@ import { User, ViewState } from './types';
 import { LoginPage } from './components/LoginPage';
 import { SchedulePage } from './components/SchedulePage';
 import { DashboardPage } from './components/DashboardPage';
+import { AdminPanel } from './components/AdminPanel';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -11,6 +12,12 @@ const App: React.FC = () => {
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setCurrentView(ViewState.SCHEDULE);
+  };
+
+  const handleAdminLogin = () => {
+    // In a real app, we would authenticate the admin here.
+    // For this demo, we bypass directly to the Admin Panel.
+    setCurrentView(ViewState.ADMIN);
   };
 
   const handleScheduleComplete = () => {
@@ -25,7 +32,10 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen font-sans text-white bg-tec-bg-dark">
       {currentView === ViewState.LOGIN && (
-        <LoginPage onLoginSuccess={handleLoginSuccess} />
+        <LoginPage 
+          onLoginSuccess={handleLoginSuccess} 
+          onAdminLogin={handleAdminLogin}
+        />
       )}
       
       {currentView === ViewState.SCHEDULE && currentUser && (
@@ -39,6 +49,10 @@ const App: React.FC = () => {
           user={currentUser} 
           onLogout={handleLogout} 
         />
+      )}
+
+      {currentView === ViewState.ADMIN && (
+        <AdminPanel onLogout={handleLogout} />
       )}
     </div>
   );
