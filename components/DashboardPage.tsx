@@ -11,54 +11,82 @@ interface DashboardPageProps {
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) => {
   const [spots, setSpots] = useState<SpotType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedLevel, setSelectedLevel] = useState(1);
+  
+  // Modal State
   const [selectedSpot, setSelectedSpot] = useState<SpotType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // 1. Fetch Logic
   const fetchSpots = async () => {
     try {
       const data = await api.getSpots(user.tiene_discapacidad === 1);
       setSpots(data);
+      setLoading(false);
     } catch (error) {
       console.error("Failed to fetch spots", error);
+      setLoading(false);
     }
   };
 
+  // 2. Real-time Polling & Initial Load
   useEffect(() => {
     fetchSpots();
-    const interval = setInterval(fetchSpots, 3000);
-    return () => clearInterval(interval);
+    // Refresh every 5 seconds (Real-time requirement)
+    const intervalId = setInterval(fetchSpots, 5000);
+    
+    // Cleanup on unmount
+    return () => clearInterval(intervalId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user.tiene_discapacidad]);
+  }, []);
+
+  // 3. Filter by Level
+  // Assuming levels are 1 and 2 based on data. Can be dynamic.
+  const availableLevels = [1, 2];
+  const filteredSpots = spots.filter(spot => spot.level_id === selectedLevel);
 
   const handleSpotClick = (spot: SpotType) => {
     setSelectedSpot(spot);
     setIsModalOpen(true);
   };
 
-  const handleReservationComplete = () => {
-    fetchSpots(); // Immediate refresh
-  };
-
   return (
     <div className="min-h-screen pb-12 bg-tec-bg-dark">
       {/* Header */}
-      <header className="bg-tec-surface shadow-white-glow sticky top-0 z-30 border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+      <header className="bg-tec-surface shadow-white-glow sticky top-0 z-30 border-b border-white/10 transition-all">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">Smart Parking</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-tec-green animate-pulse"></span>
+              Smart Parking Live
+            </h1>
             <p className="text-xs text-tec-light-blue uppercase tracking-wider">Hola, {user.nombre}</p>
           </div>
+          
           <div className="flex items-center gap-4">
-            {user.tiene_discapacidad === 1 && (
-              <span className="hidden md:inline-flex items-center px-3 py-1 rounded-full bg-blue-900/50 border border-tec-blue text-tec-light-blue text-xs font-bold shadow-[0_0_10px_rgba(0,57,165,0.4)]">
-                <span className="mr-1">♿</span> Zona Accesible
-              </span>
-            )}
+             {/* Level Selector */}
+            <div className="flex bg-black/40 p-1 rounded-lg border border-white/10">
+              {availableLevels.map(level => (
+                <button
+                  key={level}
+                  onClick={() => setSelectedLevel(level)}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    selectedLevel === level 
+                      ? 'bg-tec-blue text-white shadow-lg' 
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  Nivel {level}
+                </button>
+              ))}
+            </div>
+
             <button 
               onClick={onLogout}
-              className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
+              className="text-sm font-medium text-gray-400 hover:text-white transition-colors ml-2"
             >
-              Cerrar Sesión
+              Salir
             </button>
           </div>
         </div>
@@ -66,34 +94,44 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8 flex items-center justify-between bg-tec-surface p-4 rounded-lg border border-white/5 shadow-md">
-          <h2 className="text-xl font-bold text-white">Estado Actual</h2>
-          <div className="flex gap-4 text-sm">
+        {/* Status Legend */}
+        <div className="mb-6 flex items-center justify-between bg-tec-surface/50 p-3 rounded-lg border border-white/5 backdrop-blur-sm">
+          <span className="text-sm font-medium text-gray-300">Nivel {selectedLevel}</span>
+          <div className="flex gap-4 text-xs font-bold uppercase tracking-widest">
             <div className="flex items-center">
-              <span className="w-3 h-3 rounded-full bg-tec-green mr-2 shadow-[0_0_8px_#00E676]"></span>
-              <span className="text-gray-300">Libre</span>
+              <span className="w-2 h-2 rounded-full bg-tec-green mr-2 shadow-[0_0_8px_#00E676]"></span>
+              <span className="text-tec-green">Disponible</span>
             </div>
             <div className="flex items-center">
-              <span className="w-3 h-3 rounded-full bg-tec-orange mr-2 shadow-[0_0_8px_#FF8C42]"></span>
-              <span className="text-gray-300">Ocupado</span>
+              <span className="w-2 h-2 rounded-full bg-tec-orange mr-2 shadow-[0_0_8px_#FF8C42]"></span>
+              <span className="text-tec-orange">Ocupado</span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {spots.map((spot) => (
-            <ParkingSpot 
-              key={spot.spot_id} 
-              spot={spot} 
-              onClick={handleSpotClick} 
-            />
-          ))}
-        </div>
-
-        {spots.length === 0 && (
-            <div className="text-center py-20 text-gray-500">
-                <p>Cargando información del sistema...</p>
-            </div>
+        {loading ? (
+           <div className="flex flex-col items-center justify-center py-20">
+             <div className="w-12 h-12 border-4 border-tec-blue border-t-transparent rounded-full animate-spin mb-4"></div>
+             <p className="text-tec-light-blue animate-pulse">Sincronizando sensores...</p>
+           </div>
+        ) : (
+          <>
+            {filteredSpots.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-[fadeIn_0.5s_ease-out]">
+                {filteredSpots.map((spot) => (
+                  <ParkingSpot 
+                    key={spot.spot_id} 
+                    spot={spot} 
+                    onClick={handleSpotClick} 
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-20 bg-tec-surface rounded-xl border border-white/5 border-dashed">
+                  <p className="text-gray-500">No hay lugares registrados en el Nivel {selectedLevel}.</p>
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -107,7 +145,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
             setIsModalOpen(false);
             setSelectedSpot(null);
           }}
-          onReservationComplete={handleReservationComplete}
+          onReservationComplete={() => fetchSpots()}
         />
       )}
     </div>

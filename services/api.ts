@@ -1,8 +1,8 @@
 import { User, ParkingSpot, Reservation, AdminStats } from '../types';
 
-const BASE_URL = 'https://oracleapex.com/ords/a00842796/smartparking';
+const BASE_URL = 'https://oracleapex.com/ords/a00842796';
 
-// --- FALLBACK DATA (Matches Project Requirements: 8 Spots Total) ---
+// --- FALLBACK DATA (Updated to match new Schema with Levels) ---
 const MOCK_USER: User = {
   user_id: 999,
   nombre: "Usuario Demo (Offline)",
@@ -10,29 +10,21 @@ const MOCK_USER: User = {
   tiene_discapacidad: 0
 };
 
-// Config: 6 Normal Spots, 2 Disability Spots. 
-// Scenario: Only 2 Normal spots are occupied (102 and 105).
 const MOCK_SPOTS: ParkingSpot[] = [
-  // Normal Spots (6)
-  { spot_id: 101, spot_number: "A-01", is_occupied_now: 0, is_disability_spot: false },
-  { spot_id: 102, spot_number: "A-02", is_occupied_now: 1, is_disability_spot: false }, // Occupied
-  { spot_id: 103, spot_number: "A-03", is_occupied_now: 0, is_disability_spot: false },
-  { spot_id: 104, spot_number: "A-04", is_occupied_now: 0, is_disability_spot: false },
-  { spot_id: 105, spot_number: "A-05", is_occupied_now: 1, is_disability_spot: false }, // Occupied
-  { spot_id: 106, spot_number: "A-06", is_occupied_now: 0, is_disability_spot: false },
-  // Disability Spots (2)
-  { spot_id: 201, spot_number: "D-01", is_occupied_now: 0, is_disability_spot: true },
-  { spot_id: 202, spot_number: "D-02", is_occupied_now: 0, is_disability_spot: true }, 
+  // LEVEL 1
+  { spot_id: 101, level_id: 1, available: 1, spot_number: "101" },
+  { spot_id: 102, level_id: 1, available: 0, spot_number: "102" },
+  { spot_id: 103, level_id: 1, available: 1, spot_number: "103" },
+  { spot_id: 104, level_id: 1, available: 1, spot_number: "104" },
+  // LEVEL 2
+  { spot_id: 201, level_id: 2, available: 1, spot_number: "201" },
+  { spot_id: 202, level_id: 2, available: 0, spot_number: "202" },
+  { spot_id: 203, level_id: 2, available: 0, spot_number: "203" },
+  { spot_id: 204, level_id: 2, available: 1, spot_number: "204" },
 ];
 
 const handleResponse = async (response: Response) => {
   if (!response.ok) {
-    try {
-      const text = await response.text();
-      console.warn(`API Error Response: ${response.status}`, text);
-    } catch (e) {
-      console.warn(`API Error Response: ${response.status}`);
-    }
     throw new Error(`API Error: ${response.status}`);
   }
   try {
@@ -46,7 +38,7 @@ const handleResponse = async (response: Response) => {
 export const api = {
   login: async (matricula: string, nombre: string, hasDisability: boolean): Promise<User> => {
     try {
-      const response = await fetch(`${BASE_URL}/login`, {
+      const response = await fetch(`${BASE_URL}/smartparking/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ matricula, nombre, tiene_discapacidad: hasDisability ? 1 : 0 }),
@@ -67,42 +59,36 @@ export const api = {
   },
 
   getSpots: async (disability: boolean): Promise<ParkingSpot[]> => {
-    const returnMocks = () => {
-      if (disability) return MOCK_SPOTS.filter(s => s.is_disability_spot);
-      return MOCK_SPOTS.filter(s => !s.is_disability_spot);
-    };
-
     try {
-      const response = await fetch(`${BASE_URL}/spots`);
+      // NEW ENDPOINT: /spotStatus/consulta
+      const response = await fetch(`${BASE_URL}/spotStatus/consulta`);
       const rawSpots = await handleResponse(response);
 
-      if (!Array.isArray(rawSpots)) throw new Error("Invalid API response format");
-      if (rawSpots.length === 0) return returnMocks();
+      if (!Array.isArray(rawSpots) || rawSpots.length === 0) return MOCK_SPOTS;
 
       const spots: ParkingSpot[] = rawSpots.map((s: any) => ({
         spot_id: s.spot_id,
-        spot_number: s.spot_number || `Spot-${s.spot_id}`,
-        is_occupied_now: s.is_occupied_now === 1 ? 1 : 0,
-        is_disability_spot: s.is_disability === 1 || (typeof s.spot_number === 'string' && s.spot_number.startsWith('D'))
+        level_id: s.level_id || 1, // Default to level 1 if missing
+        available: s.available !== undefined ? s.available : 1, // 1 = Available
+        date_update: s.date_update,
+        // Derived props for UI consistency
+        spot_number: `Lugar ${s.spot_id}`,
+        is_disability_spot: s.spot_id >= 200 // Logic assumption or derive from DB if column existed
       }));
 
-      const filteredSpots = disability 
-        ? spots.filter(s => s.is_disability_spot)
-        : spots.filter(s => !s.is_disability_spot);
+      // If user has disability, we might want to prioritize those spots, 
+      // but the new requirement is Level Filtering. We return all and let Dashboard filter.
+      return spots;
 
-      if (filteredSpots.length === 0 && spots.length > 0) {
-         // return returnMocks(); 
-      }
-      return filteredSpots;
     } catch (error) {
       console.warn("API getSpots Failed. Using Fallback Data.", error);
-      return returnMocks();
+      return MOCK_SPOTS;
     }
   },
 
   getReservations: async (spotId: number, date: string): Promise<Reservation[]> => {
     try {
-      const url = new URL(`${BASE_URL}/reservations`);
+      const url = new URL(`${BASE_URL}/smartparking/reservations`);
       url.searchParams.append('spot_id', spotId.toString());
       url.searchParams.append('date', date); 
       const response = await fetch(url.toString());
@@ -119,7 +105,7 @@ export const api = {
 
   createReservation: async (userId: number, spotId: number, startTime: string, endTime: string): Promise<{ status: string, reservation_id: number }> => {
     try {
-      const response = await fetch(`${BASE_URL}/reservations`, {
+      const response = await fetch(`${BASE_URL}/smartparking/reservations`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user_id: userId, spot_id: spotId, start_time: startTime, end_time: endTime }),
@@ -134,7 +120,7 @@ export const api = {
   saveSchedule: async (userId: number, slots: string[]): Promise<void> => {
     try {
       const requests = slots.map(slot => 
-        fetch(`${BASE_URL}/schedule`, {
+        fetch(`${BASE_URL}/smartparking/schedule`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: userId, time_slot: slot })
@@ -146,35 +132,19 @@ export const api = {
     }
   },
 
-  // --- ADMIN API SIMULATION ---
   getAdminStats: async (): Promise<AdminStats> => {
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
-
-    // CALCULATE BASED ON MOCK_SPOTS (Simulation of real DB query)
-    const total = MOCK_SPOTS.length; // Should be 8
-    const occupied = MOCK_SPOTS.filter(s => s.is_occupied_now === 1).length; // Should be 2
+    // Updated calculation based on new 'available' field (1=Free, 0=Occupied)
+    const occupied = MOCK_SPOTS.filter(s => s.available === 0).length;
     
-    // Simulate Temperature (e.g., Monterrey Avg)
-    const temp = 28 + Math.random() * 4 - 2; // 26 to 30 degrees
-    
-    // Simulate Humidity
-    const humidity = 40 + Math.random() * 10; // 40% to 50%
-
-    // Simulate Traffic Flow (Last 12 hours)
-    const traffic = Array.from({length: 12}, () => Math.floor(Math.random() * 20));
-
-    // Simulate Daily Occupancy (Last 7 days)
-    const daily = Array.from({length: 7}, () => Math.floor(Math.random() * 10));
-
     return {
-      temperature: parseFloat(temp.toFixed(1)),
-      humidity: Math.round(humidity),
-      totalSpots: total,
+      temperature: 28.5,
+      humidity: 45,
+      totalSpots: MOCK_SPOTS.length,
       occupiedSpots: occupied,
-      availableSpots: total - occupied,
-      trafficFlow: traffic,
-      dailyOccupancy: daily
+      availableSpots: MOCK_SPOTS.length - occupied,
+      trafficFlow: [10, 15, 8, 22, 30, 45, 30, 20, 15, 10, 5, 2],
+      dailyOccupancy: [50, 60, 55, 70, 85, 40, 30]
     };
   }
 };

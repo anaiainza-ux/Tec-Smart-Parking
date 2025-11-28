@@ -7,9 +7,11 @@ export interface User {
 
 export interface ParkingSpot {
   spot_id: number;
-  spot_number: string;
-  is_occupied_now: number; // 0 or 1
-  is_disability_spot: boolean; // Helper property for frontend filtering
+  level_id: number; // New field from DB
+  available: number; // 1 = Available, 0 = Occupied
+  date_update?: string;
+  spot_number?: string; // Derived for display
+  is_disability_spot?: boolean; // Helper
 }
 
 export interface Reservation {
