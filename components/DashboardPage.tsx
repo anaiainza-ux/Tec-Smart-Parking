@@ -18,10 +18,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
   const [selectedSpot, setSelectedSpot] = useState<SpotType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Check disability status
+  const isDisabilityUser = user.tiene_discapacidad === 1;
+
   // 1. Fetch Logic
   const fetchSpots = async () => {
     try {
-      const data = await api.getSpots(user.tiene_discapacidad === 1);
+      const data = await api.getSpots(isDisabilityUser);
       setSpots(data);
       setLoading(false);
     } catch (error) {
@@ -41,10 +44,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 3. Filter by Level
-  // Assuming levels are 1 and 2 based on data. Can be dynamic.
+  // 3. Filter by Level (FORCED LAYOUT: 4 per level)
   const availableLevels = [1, 2];
-  const filteredSpots = spots.filter(spot => spot.level_id === selectedLevel);
+  
+  // Sort spots by ID to ensure consistent ordering (e.g. 1, 2, 3, 4, 5...)
+  const sortedSpots = [...spots].sort((a, b) => a.spot_id - b.spot_id);
+
+  // Split logic: First 4 go to Level 1, Next 4 go to Level 2
+  // If disability user, logic ensures they only see Level 1 content effectively because we lock the tab
+  const filteredSpots = selectedLevel === 1 
+    ? sortedSpots.slice(0, 4) 
+    : sortedSpots.slice(4, 8);
 
   const handleSpotClick = (spot: SpotType) => {
     setSelectedSpot(spot);
@@ -61,25 +71,32 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
               <span className="w-2 h-2 rounded-full bg-tec-green animate-pulse"></span>
               Smart Parking Live
             </h1>
-            <p className="text-xs text-tec-light-blue uppercase tracking-wider">Hola, {user.nombre}</p>
+            <p className="text-xs text-tec-light-blue uppercase tracking-wider">
+              Hola, {user.nombre} {isDisabilityUser && '(Acceso Preferencial)'}
+            </p>
           </div>
           
           <div className="flex items-center gap-4">
              {/* Level Selector */}
             <div className="flex bg-black/40 p-1 rounded-lg border border-white/10">
-              {availableLevels.map(level => (
-                <button
-                  key={level}
-                  onClick={() => setSelectedLevel(level)}
-                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-                    selectedLevel === level 
-                      ? 'bg-tec-blue text-white shadow-lg' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Nivel {level}
-                </button>
-              ))}
+              {availableLevels.map(level => {
+                // HIDE Level 2 if user has disability
+                if (isDisabilityUser && level !== 1) return null;
+
+                return (
+                  <button
+                    key={level}
+                    onClick={() => setSelectedLevel(level)}
+                    className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      selectedLevel === level 
+                        ? 'bg-tec-blue text-white shadow-lg' 
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {isDisabilityUser ? 'Zona Accesible (N1)' : `Nivel ${level}`}
+                  </button>
+                );
+              })}
             </div>
 
             <button 
@@ -96,7 +113,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Status Legend */}
         <div className="mb-6 flex items-center justify-between bg-tec-surface/50 p-3 rounded-lg border border-white/5 backdrop-blur-sm">
-          <span className="text-sm font-medium text-gray-300">Nivel {selectedLevel}</span>
+          <span className="text-sm font-medium text-gray-300">
+            {isDisabilityUser ? 'Mostrando Planta Baja' : `Nivel ${selectedLevel}`}
+          </span>
           <div className="flex gap-4 text-xs font-bold uppercase tracking-widest">
             <div className="flex items-center">
               <span className="w-2 h-2 rounded-full bg-tec-green mr-2 shadow-[0_0_8px_#00E676]"></span>
@@ -128,7 +147,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ user, onLogout }) 
               </div>
             ) : (
               <div className="text-center py-20 bg-tec-surface rounded-xl border border-white/5 border-dashed">
-                  <p className="text-gray-500">No hay lugares registrados en el Nivel {selectedLevel}.</p>
+                  <p className="text-gray-500">No hay lugares registrados en este rango.</p>
               </div>
             )}
           </>
